@@ -9,9 +9,7 @@ func (s *Sound) Beep() {
 }
 
 func (s *Sound) Update() {
-	s.Timer.Dec()
-
-	if s.Timer.IsZero() {
+	if s.Timer.Dec() {
 		s.Beep()
 	}
 }

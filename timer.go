@@ -3,23 +3,28 @@ package chip8
 // 60 Hz. (60 opcodes in one second)
 
 type Timer struct {
-	Counter int8
+	Counter  uint8
+	IsActive bool
 }
 
 func (t *Timer) Init() {
-	t.Counter = -1
+	t.Counter = 0
+	t.IsActive = false
 }
 
-func (t *Timer) Set(counter_val int8) {
+func (t *Timer) Set(counter_val uint8) {
 	t.Counter = counter_val
+	t.IsActive = t.Counter > 0
 }
 
-func (t *Timer) Dec() {
-	if t.Counter >= -1 {
+/// @return bool ; true if reached zero while active, false otherwise
+func (t *Timer) Dec() bool {
+	if t.Counter > 0 {
 		t.Counter -= 1
 	}
-}
 
-func (t *Timer) IsZero() bool {
-	return t.Counter == 0
+	became_zero := t.Counter == 0 && t.IsActive
+	t.IsActive = t.Counter > 0
+
+	return became_zero
 }

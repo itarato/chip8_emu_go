@@ -69,13 +69,16 @@ func (e *Emu) RunCycle() {
 
 		e.Input.UpdateState()
 		e.Sound.Update()
-		e.Timer.Dec()
+		e.Timer.Dec() // @TODO - Probably needs ignoring opcode while in-delay
 
 		// @TODO Throttle 1 cycle to 16ms (60 instruction per second).
 	}
 }
 
 func (e *Emu) ExecIntruction(opcode uint16) {
+	reg_num_x := U16Mask(opcode, 0x0F00)
+	reg_num_y := U16Mask(opcode, 0x00F0)
+
 	switch U16Mask(opcode, 0xF000) {
 	case 0x0:
 		switch U16Mask(opcode, 0x00FF) {
@@ -115,8 +118,6 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		}
 	case 0x5:
 		// 5XY0 	Cond 	if(Vx==Vy) 	Skips the next instruction if VX equals VY. (Usually the next instruction is a jump to skip a code block)
-		reg_num_x := U16Mask(opcode, 0x0F00)
-		reg_num_y := U16Mask(opcode, 0x00F0)
 		if e.Reg.V[reg_num_x] == e.Reg.V[reg_num_y] {
 			e.Reg.SkipOpcode()
 		}
@@ -131,9 +132,6 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		nn := U16Mask(opcode, 0x00FF)
 		e.Reg.V[reg_num] += byte(nn)
 	case 0x8:
-		reg_num_x := U16Mask(opcode, 0x0F00)
-		reg_num_y := U16Mask(opcode, 0x00F0)
-
 		switch U16Mask(opcode, 0x000F) {
 		case 0x0:
 			// 8XY0 	Assign 	Vx=Vy 	Sets VX to the value of VY.
@@ -182,8 +180,6 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		}
 	case 0x9:
 		// 9XY0 	Cond 	if(Vx!=Vy) 	Skips the next instruction if VX doesn't equal VY. (Usually the next instruction is a jump to skip a code block)
-		reg_num_x := U16Mask(opcode, 0x0F00)
-		reg_num_y := U16Mask(opcode, 0x00F0)
 		if e.Reg.V[reg_num_x] != e.Reg.V[reg_num_y] {
 			e.Reg.SkipOpcode()
 		}
@@ -199,14 +195,11 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		// CXNN 	Rand 	Vx=rand()&NN 	Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
 		rand := byte(rand.Uint32() & 0xFF)
 		mask := byte(U16Mask(opcode, 0x00FF))
-		reg_num_x := U16Mask(opcode, 0x0F00)
 		e.Reg.V[reg_num_x] = rand & mask
 	case 0xD:
 		// DXYN 	Disp 	draw(Vx,Vy,N) 	Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.
 		// 				Each row of 8 pixels is read as bit-coded starting from memory location I; I value doesn’t change after the execution of this instruction.
 		// 				As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
-		reg_num_x := U16Mask(opcode, 0x0F00)
-		reg_num_y := U16Mask(opcode, 0x00F0)
 		n := U16Mask(opcode, 0x000F)
 		has_flip := e.Display.DrawSprite(uint8(e.Reg.V[reg_num_x]), uint8(e.Reg.V[reg_num_y]), uint8(n))
 		if has_flip {
@@ -217,32 +210,58 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 	case 0xE:
 		switch U16Mask(opcode, 0x00FF) {
 		case 0x9E:
-			// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
-			reg_num_x := U16Mask(opcode, 0x0F00)
+			// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed.
+			// (Usually the next instruction is a jump to skip a code block)
 			if e.Input.IsPressed(e.Reg.V[reg_num_x]) {
 				e.Reg.SkipOpcode()
 			}
 		case 0xA1:
-			// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed. (Usually the next instruction is a jump to skip a code block)
-			reg_num_x := U16Mask(opcode, 0x0F00)
+			// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed.
+			// (Usually the next instruction is a jump to skip a code block)
 			if !e.Input.IsPressed(e.Reg.V[reg_num_x]) {
 				e.Reg.SkipOpcode()
 			}
 		}
 	case 0xF:
-	// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
-	// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
-	// FX15 	Timer 	delay_timer(Vx) 	Sets the delay timer to VX.
-	// FX18 	Sound 	sound_timer(Vx) 	Sets the sound timer to VX.
-	// FX1E 	MEM 	I +=Vx 	Adds VX to I. VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0 when there isn't.[c]
-	// FX29 	MEM 	I=sprite_addr[Vx] 	Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-	// FX33 	BCD 	set_BCD(Vx);
-	// 	*(I+0)=BCD(3);
-	// 	*(I+1)=BCD(2);
-	// 	*(I+2)=BCD(1);
-	// 	Stores the binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
-	// FX55 	MEM 	reg_dump(Vx,&I) 	Stores V0 to VX (including VX) in memory starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
-	// FX65 	MEM 	reg_load(Vx,&I) 	Fills V0 to VX (including VX) with values from memory starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
+		switch U16Mask(opcode, 0x00FF) {
+		case 0x07:
+			// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
+			e.Reg.V[reg_num_x] = byte(e.Timer.Counter)
+		case 0x0A:
+			// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
+			panic("Unimplemented FX0A")
+		case 0x15:
+			// FX15 	Timer 	delay_timer(Vx) 	Sets the delay timer to VX.
+			e.Timer.Set(e.Reg.V[reg_num_x])
+		case 0x18:
+			// FX18 	Sound 	sound_timer(Vx) 	Sets the sound timer to VX.
+			e.Sound.Timer.Set(e.Reg.V[reg_num_x])
+		case 0x1E:
+			// FX1E 	MEM 	I +=Vx 	Adds VX to I. VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0 when there isn't.[c]
+			if e.Reg.I > 0x0FFF-uint16(e.Reg.V[reg_num_x]) {
+				e.Reg.SetRegVF()
+			} else {
+				e.Reg.UnsetRegVF()
+			}
+			e.Reg.I += uint16(e.Reg.V[reg_num_x])
+		case 0x29:
+		// FX29 	MEM 	I=sprite_addr[Vx] 	Sets I to the location of the sprite for the character in VX.
+		// Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+		case 0x33:
+		// FX33 	BCD 	set_BCD(Vx);
+		// 	*(I+0)=BCD(3);
+		// 	*(I+1)=BCD(2);
+		// 	*(I+2)=BCD(1);
+		// 	Stores the binary-coded decimal representation of VX, with the most significant of three digits at the address in I,
+		// the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX,
+		// place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
+		case 0x55:
+		// FX55 	MEM 	reg_dump(Vx,&I) 	Stores V0 to VX (including VX) in memory starting at address I.
+		// The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
+		case 0x65:
+			// FX65 	MEM 	reg_load(Vx,&I) 	Fills V0 to VX (including VX) with values from memory starting at address I.
+			// The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
+		}
 	default:
 		panic("Illegal highes byte of opcode.")
 	}
