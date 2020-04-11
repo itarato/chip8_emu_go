@@ -15,3 +15,15 @@ func (r *Reg) Init() {
 		r.V[i] = 0x00
 	}
 }
+
+func (r *Reg) SkipOpcode() {
+	r.PC += 2
+}
+
+func (r *Reg) SetRegVF() {
+	r.V[0xF] = 1
+}
+
+func (r *Reg) UnsetRegVF() {
+	r.V[0xF] = 0
+}
