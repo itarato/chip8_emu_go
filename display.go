@@ -18,3 +18,7 @@ func (d *Display) Draw() {
 func (d *Display) Clear() {
 
 }
+
+func (d *Display) DrawSprite(x uint8, y uint8, n uint8) bool {
+	return false
+}

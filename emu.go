@@ -1,5 +1,7 @@
 package chip8
 
+import "math/rand"
+
 const (
 	ModeChip8 = iota
 )
@@ -194,9 +196,24 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		addr := U16Mask(opcode, 0x0FFF)
 		e.Reg.PC = addr + uint16(e.Reg.V[0])
 	case 0xC:
-	// CXNN 	Rand 	Vx=rand()&NN 	Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
+		// CXNN 	Rand 	Vx=rand()&NN 	Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
+		rand := byte(rand.Uint32() & 0xFF)
+		mask := byte(U16Mask(opcode, 0x00FF))
+		reg_num_x := U16Mask(opcode, 0x0F00)
+		e.Reg.V[reg_num_x] = rand & mask
 	case 0xD:
-	// DXYN 	Disp 	draw(Vx,Vy,N) 	Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels. Each row of 8 pixels is read as bit-coded starting from memory location I; I value doesn’t change after the execution of this instruction. As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
+		// DXYN 	Disp 	draw(Vx,Vy,N) 	Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.
+		// 				Each row of 8 pixels is read as bit-coded starting from memory location I; I value doesn’t change after the execution of this instruction.
+		// 				As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
+		reg_num_x := U16Mask(opcode, 0x0F00)
+		reg_num_y := U16Mask(opcode, 0x00F0)
+		n := U16Mask(opcode, 0x000F)
+		has_flip := e.Display.DrawSprite(uint8(e.Reg.V[reg_num_x]), uint8(e.Reg.V[reg_num_y]), uint8(n))
+		if has_flip {
+			e.Reg.SetRegVF()
+		} else {
+			e.Reg.UnsetRegVF()
+		}
 	case 0xE:
 	// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
 	// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed. (Usually the next instruction is a jump to skip a code block)
