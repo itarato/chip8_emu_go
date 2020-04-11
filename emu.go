@@ -179,11 +179,20 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 			e.Reg.V[reg_num_x] <<= 1
 		}
 	case 0x9:
-	// 9XY0 	Cond 	if(Vx!=Vy) 	Skips the next instruction if VX doesn't equal VY. (Usually the next instruction is a jump to skip a code block)
+		// 9XY0 	Cond 	if(Vx!=Vy) 	Skips the next instruction if VX doesn't equal VY. (Usually the next instruction is a jump to skip a code block)
+		reg_num_x := U16Mask(opcode, 0x0F00)
+		reg_num_y := U16Mask(opcode, 0x00F0)
+		if e.Reg.V[reg_num_x] != e.Reg.V[reg_num_y] {
+			e.Reg.SkipOpcode()
+		}
 	case 0xA:
-	// ANNN 	MEM 	I = NNN 	Sets I to the address NNN.
+		// ANNN 	MEM 	I = NNN 	Sets I to the address NNN.
+		addr := U16Mask(opcode, 0x0FFF)
+		e.Reg.I = addr
 	case 0xB:
-	// BNNN 	Flow 	PC=V0+NNN 	Jumps to the address NNN plus V0.
+		// BNNN 	Flow 	PC=V0+NNN 	Jumps to the address NNN plus V0.
+		addr := U16Mask(opcode, 0x0FFF)
+		e.Reg.PC = addr + uint16(e.Reg.V[0])
 	case 0xC:
 	// CXNN 	Rand 	Vx=rand()&NN 	Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
 	case 0xD:
