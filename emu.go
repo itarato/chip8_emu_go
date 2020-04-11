@@ -215,8 +215,20 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 			e.Reg.UnsetRegVF()
 		}
 	case 0xE:
-	// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
-	// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed. (Usually the next instruction is a jump to skip a code block)
+		switch U16Mask(opcode, 0x00FF) {
+		case 0x9E:
+			// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
+			reg_num_x := U16Mask(opcode, 0x0F00)
+			if e.Input.IsPressed(e.Reg.V[reg_num_x]) {
+				e.Reg.SkipOpcode()
+			}
+		case 0xA1:
+			// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed. (Usually the next instruction is a jump to skip a code block)
+			reg_num_x := U16Mask(opcode, 0x0F00)
+			if !e.Input.IsPressed(e.Reg.V[reg_num_x]) {
+				e.Reg.SkipOpcode()
+			}
+		}
 	case 0xF:
 	// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
 	// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
@@ -225,9 +237,9 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 	// FX1E 	MEM 	I +=Vx 	Adds VX to I. VF is set to 1 when there is a range overflow (I+VX>0xFFF), and to 0 when there isn't.[c]
 	// FX29 	MEM 	I=sprite_addr[Vx] 	Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 	// FX33 	BCD 	set_BCD(Vx);
-	// *(I+0)=BCD(3);
-	// *(I+1)=BCD(2);
-	// *(I+2)=BCD(1);
+	// 	*(I+0)=BCD(3);
+	// 	*(I+1)=BCD(2);
+	// 	*(I+2)=BCD(1);
 	// 	Stores the binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
 	// FX55 	MEM 	reg_dump(Vx,&I) 	Stores V0 to VX (including VX) in memory starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
 	// FX65 	MEM 	reg_load(Vx,&I) 	Fills V0 to VX (including VX) with values from memory starting at address I. The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
