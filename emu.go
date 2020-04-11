@@ -14,6 +14,8 @@ type Emu struct {
 	Halted   bool
 	DrawFlag bool
 	RomPath  string
+	Stack    [0x10]uint16
+	SP       uint8
 }
 
 func MakeEmu(rom_path string) Emu {
@@ -29,6 +31,8 @@ func MakeEmu(rom_path string) Emu {
 		Halted:   true,
 		DrawFlag: false,
 		RomPath:  rom_path,
+		Stack:    [0x10]uint16{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		SP:       0,
 	}
 }
 
@@ -40,6 +44,7 @@ func (e *Emu) Init() {
 
 	e.Halted = false
 	e.DrawFlag = false
+	e.SP = 0x00
 }
 
 func (e *Emu) Run() {
@@ -71,9 +76,18 @@ func (e *Emu) RunCycle() {
 func (e *Emu) ExecIntruction(opcode uint16) {
 	switch U16Mask(opcode, 0xF000) {
 	case 0x0:
-	// 0NNN 	Call 		Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
-	// 00E0 	Display 	disp_clear() 	Clears the screen.
-	// 00EE 	Flow 	return; 	Returns from a subroutine.
+		switch U16Mask(opcode, 0x00FF) {
+		case 0xE0:
+			// 00E0 	Display 	disp_clear() 	Clears the screen.
+			e.Display.Clear()
+		case 0xEE:
+			// 00EE 	Flow 	return; 	Returns from a subroutine.
+			addr := e.StackPop()
+			e.Reg.PC = addr
+		default:
+			// 0NNN 	Call 		Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
+			e.Reg.PC = U16Mask(opcode, 0x0FFF)
+		}
 	case 0x1:
 	// 1NNN 	Flow 	goto NNN; 	Jumps to address NNN.
 	case 0x2:
@@ -128,6 +142,24 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 	default:
 		panic("Illegal highes byte of opcode.")
 	}
+}
+
+func (e *Emu) StackPush(v uint16) {
+	if e.SP >= 0x0F {
+		panic("Stack is full")
+	}
+
+	e.Stack[e.SP] = v
+	e.SP += 1
+}
+
+func (e *Emu) StackPop() uint16 {
+	if e.SP == 0 {
+		panic("Stack is empty")
+	}
+
+	e.SP -= 1
+	return e.Stack[e.SP]
 }
 
 func (e *Emu) FetchOpcode() (uint16, error) {

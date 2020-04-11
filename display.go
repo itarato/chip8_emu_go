@@ -14,3 +14,7 @@ func (d *Display) Init() {
 func (d *Display) Draw() {
 
 }
+
+func (d *Display) Clear() {
+
+}

@@ -52,13 +52,6 @@ func (m *Mem) Init(rom_path string) {
 	}
 }
 
-func (m *Mem) StackPush(b byte) {
-}
-
-func (m *Mem) StackPop() byte {
-	panic("Unimplemented")
-}
-
 func (m *Mem) Read(addr uint16) (byte, error) {
 	if addr >= 0x1000 {
 		return 0, fmt.Errorf("Unknown location %d", addr)
@@ -67,7 +60,7 @@ func (m *Mem) Read(addr uint16) (byte, error) {
 	return m.Data[addr], nil
 }
 
-func (m *Mem) Write(addr uint, v byte) error {
+func (m *Mem) Write(addr uint16, v byte) error {
 	if addr >= 0x1000 {
 		return fmt.Errorf("Unknown location %d", addr)
 	}
