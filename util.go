@@ -7,3 +7,7 @@ func U16Mask(n uint16, m uint16) uint16 {
 	}
 	return n & m
 }
+
+func ByteBitN(b byte, pos uint8) byte {
+	return (b >> (7 - pos)) & 1
+}

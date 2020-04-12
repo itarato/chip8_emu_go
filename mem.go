@@ -60,6 +60,19 @@ func (m *Mem) Read(addr uint16) (byte, error) {
 	return m.Data[addr], nil
 }
 
+func (m *Mem) ReadRange(addr uint16, len uint16) ([]byte, error) {
+	if addr+len > 0x1000 {
+		return nil, fmt.Errorf("Unknown location %d", addr)
+	}
+
+	byte_arr := make([]byte, len)
+	for i := 0; i < int(len); i++ {
+		byte_arr[i] = m.Data[int(addr)+i]
+	}
+
+	return byte_arr, nil
+}
+
 func (m *Mem) Write(addr uint16, v byte) error {
 	if addr >= 0x1000 {
 		return fmt.Errorf("Unknown location %d", addr)

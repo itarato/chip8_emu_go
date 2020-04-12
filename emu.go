@@ -65,6 +65,7 @@ func (e *Emu) RunCycle() {
 
 		if e.DrawFlag {
 			e.Display.Draw()
+			e.DrawFlag = false
 		}
 
 		e.Input.UpdateState()
@@ -85,6 +86,7 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		case 0xE0:
 			// 00E0 	Display 	disp_clear() 	Clears the screen.
 			e.Display.Clear()
+			e.DrawFlag = true
 		case 0xEE:
 			// 00EE 	Flow 	return; 	Returns from a subroutine.
 			addr := e.StackPop()
@@ -201,12 +203,19 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		// 				Each row of 8 pixels is read as bit-coded starting from memory location I; I value doesn’t change after the execution of this instruction.
 		// 				As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn’t happen
 		n := U16Mask(opcode, 0x000F)
-		has_flip := e.Display.DrawSprite(uint8(e.Reg.V[reg_num_x]), uint8(e.Reg.V[reg_num_y]), uint8(n))
+		byte_arr, err_byte_arr := e.Mem.ReadRange(e.Reg.I, n)
+		if err_byte_arr != nil {
+			panic("Cannot read sprite data")
+		}
+
+		has_flip := e.Display.DrawSprite(uint8(e.Reg.V[reg_num_x]), uint8(e.Reg.V[reg_num_y]), uint8(n), byte_arr)
 		if has_flip {
 			e.Reg.SetRegVF()
 		} else {
 			e.Reg.UnsetRegVF()
 		}
+
+		e.DrawFlag = true
 	case 0xE:
 		switch U16Mask(opcode, 0x00FF) {
 		case 0x9E:
