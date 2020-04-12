@@ -1,6 +1,12 @@
 package chip8
 
-import "math/rand"
+import (
+	"math/rand"
+
+	"golang.org/x/image/colornames"
+
+	"github.com/faiface/pixel/pixelgl"
+)
 
 const (
 	ModeChip8 = iota
@@ -13,28 +19,32 @@ type Emu struct {
 	Sound
 	Timer
 	Input
+
 	Halted   bool
 	DrawFlag bool
 	RomPath  string
 	Stack    [0x10]uint16
 	SP       uint8
+
+	Win *pixelgl.Window
 }
 
-func MakeEmu(rom_path string) Emu {
+func MakeEmu(win *pixelgl.Window, rom_path string) Emu {
 	return Emu{
 		Mem:     Mem{},
 		Reg:     Reg{},
 		Display: Display{},
-		Sound: Sound{
-			Timer: Timer{},
-		},
-		Timer:    Timer{},
-		Input:    Input{},
+		Timer:   Timer{},
+		Input:   Input{},
+		Sound:   Sound{Timer: Timer{}},
+
 		Halted:   true,
 		DrawFlag: false,
 		RomPath:  rom_path,
 		Stack:    [0x10]uint16{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		SP:       0,
+
+		Win: win,
 	}
 }
 
@@ -55,7 +65,9 @@ func (e *Emu) Run() {
 }
 
 func (e *Emu) RunCycle() {
-	for !e.Halted {
+	e.Win.Clear(colornames.Black)
+
+	for !e.Win.Closed() && !e.Halted {
 		opcode, err_opcode := e.FetchOpcode()
 		if err_opcode != nil {
 			panic("Illegal opcode fetch")
@@ -71,6 +83,10 @@ func (e *Emu) RunCycle() {
 		e.Input.UpdateState()
 		e.Sound.Update()
 		e.Timer.Dec() // @TODO - Probably needs ignoring opcode while in-delay
+
+		e.Display.Imd.Draw(e.Win)
+
+		e.Win.Update()
 
 		// @TODO Throttle 1 cycle to 16ms (60 instruction per second).
 	}

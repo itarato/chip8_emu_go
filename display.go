@@ -1,19 +1,45 @@
 package chip8
 
+import (
+	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/imdraw"
+)
+
 // 64x32, monochrome.
 // Sprites: 8[w]x(1..15)[h].
 // Colliding pixels (overdrawn) are XOR-ed.
 
 type Display struct {
 	Pixels [2048] /*64x32*/ bool
+	Imd    *imdraw.IMDraw
+}
+
+func MakeDisplay() Display {
+	return Display{
+		Imd: imdraw.New(nil),
+	}
 }
 
 func (d *Display) Init() {
 	d.Clear()
+	d.Imd.Clear()
+	d.Imd.Color = pixel.RGB(1, 1, 1)
 }
 
 func (d *Display) Draw() {
+	// Move everything to Imd.
+	d.Imd.Clear()
 
+	for y := uint8(0); y < 32; y++ {
+		for x := uint8(0); x < 64; x++ {
+			pixel_on := d.GetPixel(x, y)
+			if pixel_on {
+				d.Imd.Push(pixel.V(float64(x)*10.0, float64(y)*10.0))
+				d.Imd.Push(pixel.V(float64(x)*10.0+10.0, float64(y)*10.0+10.0))
+				d.Imd.Rectangle(0)
+			}
+		}
+	}
 }
 
 func (d *Display) Clear() {
