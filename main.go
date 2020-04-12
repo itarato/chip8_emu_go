@@ -1,6 +1,8 @@
-package chip8
+package main
 
 import (
+	"itarato/chip8/chip8"
+
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 )
@@ -16,7 +18,7 @@ func run() {
 		panic(err)
 	}
 
-	e := MakeEmu(win, "/home/itarato/CHECKOUT/chip8/roms/IBM Logo.ch8")
+	e := chip8.MakeEmu(win, "/home/itarato/CHECKOUT/chip8/roms/IBM Logo.ch8")
 	e.Init()
 	e.Run()
 }
