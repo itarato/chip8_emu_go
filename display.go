@@ -9,6 +9,7 @@ type Display struct {
 }
 
 func (d *Display) Init() {
+	d.Clear()
 }
 
 func (d *Display) Draw() {
