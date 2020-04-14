@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	UiScale = 8
+	UiScale = 4
 )
 
 func run() {

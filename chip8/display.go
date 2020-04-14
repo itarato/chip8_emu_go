@@ -24,18 +24,18 @@ func MakeDisplay(scale float64) Display {
 
 func (d *Display) Init() {
 	d.Clear()
+	d.Imd.Color = pixel.RGB(1, 1, 1)
 }
 
 func (d *Display) Draw() {
 	// Move everything to Imd.
-	d.Imd.Reset()
-	d.Imd.Color = pixel.RGB(1, 1, 1)
+	d.Imd.Clear()
 
 	for y := uint8(0); y < 32; y++ {
 		for x := uint8(0); x < 64; x++ {
 			if d.GetPixel(x, y) {
 				d.Imd.Push(pixel.V(float64(x)*d.Scale, float64(32-y)*d.Scale))
-				d.Imd.Push(pixel.V(float64(x+1)*d.Scale-1.0, float64(32-(y+1))*d.Scale-1.0))
+				d.Imd.Push(pixel.V(float64(x+1)*d.Scale, float64(32-(y+1))*d.Scale))
 				d.Imd.Rectangle(0)
 			}
 		}
@@ -54,8 +54,8 @@ func (d *Display) DrawSprite(x uint8, y uint8, n uint8, byte_arr []byte) bool {
 
 	for offs_y := 0; offs_y < int(n); offs_y++ {
 		for bit_i := 0; bit_i < 8; bit_i++ {
-			prev_pixel := d.GetPixel(x+uint8(bit_i), y+uint8(offs_y))
 			curr_pixel := BitN(byte_arr[offs_y], uint8(bit_i)) == 1
+			prev_pixel := d.GetPixel(x+uint8(bit_i), y+uint8(offs_y))
 			if prev_pixel && curr_pixel {
 				has_collision = true
 			}

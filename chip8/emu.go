@@ -1,7 +1,7 @@
 package chip8
 
 import (
-	"fmt"
+	"image/color"
 	"math/rand"
 
 	"golang.org/x/image/colornames"
@@ -68,6 +68,13 @@ func (e *Emu) Run() {
 }
 
 func (e *Emu) RunCycle() {
+	// f, err := os.Create("/home/itarato/Desktop/prof")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// pprof.StartCPUProfile(f)
+	// defer pprof.StopCPUProfile()
+
 	for !e.Win.Closed() && !e.Halted {
 		opcode, err_opcode := e.FetchOpcode()
 		if err_opcode != nil {
@@ -77,17 +84,16 @@ func (e *Emu) RunCycle() {
 		e.ExecIntruction(opcode)
 
 		if e.DrawFlag {
+			e.Win.Clear(color.Black)
 			e.Display.Draw()
+			e.Display.Imd.Draw(e.Win)
+			e.Win.Update()
 			e.DrawFlag = false
 		}
 
 		e.Input.UpdateState()
 		e.Sound.Update()
 		e.Timer.Dec() // @TODO - Probably needs ignoring opcode while in-delay
-
-		e.Display.Imd.Draw(e.Win)
-
-		e.Win.Update()
 
 		// @TODO Throttle 1 cycle to 16ms (60 instruction per second).
 	}
@@ -226,7 +232,6 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		}
 
 		e.DrawFlag = true
-		fmt.Println(e.Reg.I)
 	case 0xE:
 		switch U16Mask(opcode, 0x00FF) {
 		case 0x9E:
