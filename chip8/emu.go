@@ -1,6 +1,7 @@
 package chip8
 
 import (
+	"fmt"
 	"math/rand"
 
 	"golang.org/x/image/colornames"
@@ -29,11 +30,11 @@ type Emu struct {
 	Win *pixelgl.Window
 }
 
-func MakeEmu(win *pixelgl.Window, rom_path string) Emu {
+func MakeEmu(win *pixelgl.Window, ui_scale int, rom_path string) Emu {
 	return Emu{
 		Mem:     Mem{},
 		Reg:     Reg{},
-		Display: MakeDisplay(),
+		Display: MakeDisplay(float64(ui_scale)),
 		Timer:   Timer{},
 		Input:   Input{},
 		Sound:   Sound{Timer: Timer{}},
@@ -105,33 +106,28 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 			e.DrawFlag = true
 		case 0xEE:
 			// 00EE 	Flow 	return; 	Returns from a subroutine.
-			addr := e.StackPop()
-			e.Reg.PC = addr
+			e.Reg.PC = e.StackPop()
 		default:
 			// 0NNN 	Call 		Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
 			panic("Unimplemented opcode 0NNN")
 		}
 	case 0x1:
 		// 1NNN 	Flow 	goto NNN; 	Jumps to address NNN.
-		addr := U16Mask(opcode, 0x0FFF)
-		e.Reg.PC = addr
+		e.Reg.PC = U16Mask(opcode, 0x0FFF)
 	case 0x2:
 		// 2NNN 	Flow 	*(0xNNN)() 	Calls subroutine at NNN.
 		e.StackPush(e.Reg.PC)
-		addr := U16Mask(opcode, 0x0FFF)
-		e.Reg.PC = addr
+		e.Reg.PC = U16Mask(opcode, 0x0FFF)
 	case 0x3:
 		// 3XNN 	Cond 	if(Vx==NN) 	Skips the next instruction if VX equals NN. (Usually the next instruction is a jump to skip a code block)
-		reg_num := U16Mask(opcode, 0x0F00)
 		nn := U16Mask(opcode, 0x00FF)
-		if e.Reg.V[reg_num] == byte(nn) {
+		if e.Reg.V[reg_num_x] == uint8(nn) {
 			e.Reg.SkipOpcode()
 		}
 	case 0x4:
 		// 4XNN 	Cond 	if(Vx!=NN) 	Skips the next instruction if VX doesn't equal NN. (Usually the next instruction is a jump to skip a code block)
-		reg_num := U16Mask(opcode, 0x0F00)
 		nn := U16Mask(opcode, 0x00FF)
-		if e.Reg.V[reg_num] != byte(nn) {
+		if e.Reg.V[reg_num_x] != uint8(nn) {
 			e.Reg.SkipOpcode()
 		}
 	case 0x5:
@@ -141,14 +137,12 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		}
 	case 0x6:
 		// 6XNN 	Const 	Vx = NN 	Sets VX to NN.
-		reg_num := U16Mask(opcode, 0x0F00)
 		nn := U16Mask(opcode, 0x00FF)
-		e.Reg.V[reg_num] = byte(nn)
+		e.Reg.V[reg_num_x] = uint8(nn)
 	case 0x7:
 		// 7XNN 	Const 	Vx += NN 	Adds NN to VX. (Carry flag is not changed)
-		reg_num := U16Mask(opcode, 0x0F00)
 		nn := U16Mask(opcode, 0x00FF)
-		e.Reg.V[reg_num] += byte(nn)
+		e.Reg.V[reg_num_x] += uint8(nn)
 	case 0x8:
 		switch U16Mask(opcode, 0x000F) {
 		case 0x0:
@@ -195,6 +189,8 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 			// 8XYE[a] 	BitOp 	Vx<<=1 	Stores the most significant bit of VX in VF and then shifts VX to the left by 1.[b]
 			e.Reg.V[0xF] = (e.Reg.V[reg_num_x] >> 7) & 1
 			e.Reg.V[reg_num_x] <<= 1
+		default:
+			panic("Illegal 8xxx opcode")
 		}
 	case 0x9:
 		// 9XY0 	Cond 	if(Vx!=Vy) 	Skips the next instruction if VX doesn't equal VY. (Usually the next instruction is a jump to skip a code block)
@@ -203,16 +199,14 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		}
 	case 0xA:
 		// ANNN 	MEM 	I = NNN 	Sets I to the address NNN.
-		addr := U16Mask(opcode, 0x0FFF)
-		e.Reg.I = addr
+		e.Reg.I = U16Mask(opcode, 0x0FFF)
 	case 0xB:
 		// BNNN 	Flow 	PC=V0+NNN 	Jumps to the address NNN plus V0.
-		addr := U16Mask(opcode, 0x0FFF)
-		e.Reg.PC = addr + uint16(e.Reg.V[0])
+		e.Reg.PC = U16Mask(opcode, 0x0FFF) + uint16(e.Reg.V[0])
 	case 0xC:
 		// CXNN 	Rand 	Vx=rand()&NN 	Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
-		rand := byte(rand.Uint32() & 0xFF)
-		mask := byte(U16Mask(opcode, 0x00FF))
+		rand := uint8(rand.Uint32() & 0xFF)
+		mask := uint8(U16Mask(opcode, 0x00FF))
 		e.Reg.V[reg_num_x] = rand & mask
 	case 0xD:
 		// DXYN 	Disp 	draw(Vx,Vy,N) 	Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.
@@ -232,6 +226,7 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 		}
 
 		e.DrawFlag = true
+		fmt.Println(e.Reg.I)
 	case 0xE:
 		switch U16Mask(opcode, 0x00FF) {
 		case 0x9E:
@@ -246,12 +241,14 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 			if !e.Input.IsPressed(e.Reg.V[reg_num_x]) {
 				e.Reg.SkipOpcode()
 			}
+		default:
+			panic("Illegal Exxx opcode")
 		}
 	case 0xF:
 		switch U16Mask(opcode, 0x00FF) {
 		case 0x07:
 			// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
-			e.Reg.V[reg_num_x] = byte(e.Timer.Counter)
+			e.Reg.V[reg_num_x] = uint8(e.Timer.Counter)
 		case 0x0A:
 			// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
 			panic("Unimplemented FX0A")
@@ -311,6 +308,8 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 				}
 				e.Reg.V[i] = b
 			}
+		default:
+			panic("Illegal Fxxx opcode.")
 		}
 	default:
 		panic("Illegal highes byte of opcode.")
@@ -318,7 +317,7 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 }
 
 func (e *Emu) StackPush(v uint16) {
-	if e.SP >= 0x0F {
+	if e.SP >= 0x10 {
 		panic("Stack is full")
 	}
 

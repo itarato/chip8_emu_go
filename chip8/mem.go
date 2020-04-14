@@ -12,7 +12,7 @@ import (
 // 0x0F00 - 0x0FFF: Display refresh
 
 type Mem struct {
-	Data [0x1000]byte
+	Data [0x1000]uint8
 }
 
 func (m *Mem) Init(rom_path string) {
@@ -42,7 +42,7 @@ func (m *Mem) Init(rom_path string) {
 		m.Data[i] = f
 	}
 
-	// Read ROM.
+	// Load ROM.
 	rom_content, err_rom_content := ioutil.ReadFile(rom_path)
 	if err_rom_content != nil {
 		panic("Cannot read rom")
@@ -52,7 +52,7 @@ func (m *Mem) Init(rom_path string) {
 	}
 }
 
-func (m *Mem) Read(addr uint16) (byte, error) {
+func (m *Mem) Read(addr uint16) (uint8, error) {
 	if addr >= 0x1000 {
 		return 0, fmt.Errorf("Unknown location %d", addr)
 	}
@@ -60,12 +60,12 @@ func (m *Mem) Read(addr uint16) (byte, error) {
 	return m.Data[addr], nil
 }
 
-func (m *Mem) ReadRange(addr uint16, len uint16) ([]byte, error) {
+func (m *Mem) ReadRange(addr uint16, len uint16) ([]uint8, error) {
 	if addr+len > 0x1000 {
 		return nil, fmt.Errorf("Unknown location %d", addr)
 	}
 
-	byte_arr := make([]byte, len)
+	byte_arr := make([]uint8, len)
 	for i := 0; i < int(len); i++ {
 		byte_arr[i] = m.Data[int(addr)+i]
 	}
@@ -73,7 +73,7 @@ func (m *Mem) ReadRange(addr uint16, len uint16) ([]byte, error) {
 	return byte_arr, nil
 }
 
-func (m *Mem) Write(addr uint16, v byte) error {
+func (m *Mem) Write(addr uint16, v uint8) error {
 	if addr >= 0x1000 {
 		return fmt.Errorf("Unknown location %d", addr)
 	}

@@ -5,9 +5,13 @@ type Input struct {
 }
 
 func (i *Input) Init() {
+	for idx, _ := range i.Keys {
+		i.Keys[idx] = false
+	}
 }
 
 func (i *Input) UpdateState() {
+	// @TODO
 }
 
 func (i *Input) IsPressed(key_idx uint8) bool {
