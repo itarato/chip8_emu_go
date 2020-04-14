@@ -6,6 +6,8 @@ import (
 
 	"golang.org/x/image/colornames"
 
+	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
 )
 
@@ -84,14 +86,17 @@ func (e *Emu) RunCycle() {
 		e.ExecIntruction(opcode)
 
 		if e.DrawFlag {
+			imd := imdraw.New(nil)
+			imd.Color = pixel.RGB(1, 1, 1)
+
 			e.Win.Clear(color.Black)
-			e.Display.Draw()
-			e.Display.Imd.Draw(e.Win)
+			e.Display.Draw(imd)
+			imd.Draw(e.Win)
 			e.Win.Update()
 			e.DrawFlag = false
 		}
 
-		e.Input.UpdateState()
+		e.Input.UpdateState(e.Win)
 		e.Sound.Update()
 		e.Timer.Dec() // @TODO - Probably needs ignoring opcode while in-delay
 

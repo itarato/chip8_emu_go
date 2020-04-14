@@ -11,32 +11,27 @@ import (
 
 type Display struct {
 	Pixels [2048] /*64x32*/ bool
-	Imd    *imdraw.IMDraw
 	Scale  float64
 }
 
 func MakeDisplay(scale float64) Display {
 	return Display{
-		Imd:   imdraw.New(nil),
 		Scale: scale,
 	}
 }
 
 func (d *Display) Init() {
 	d.Clear()
-	d.Imd.Color = pixel.RGB(1, 1, 1)
 }
 
-func (d *Display) Draw() {
+func (d *Display) Draw(imd *imdraw.IMDraw) {
 	// Move everything to Imd.
-	d.Imd.Clear()
-
 	for y := uint8(0); y < 32; y++ {
 		for x := uint8(0); x < 64; x++ {
 			if d.GetPixel(x, y) {
-				d.Imd.Push(pixel.V(float64(x)*d.Scale, float64(32-y)*d.Scale))
-				d.Imd.Push(pixel.V(float64(x+1)*d.Scale, float64(32-(y+1))*d.Scale))
-				d.Imd.Rectangle(0)
+				imd.Push(pixel.V(float64(x)*d.Scale, float64(32-y)*d.Scale))
+				imd.Push(pixel.V(float64(x+1)*d.Scale, float64(32-(y+1))*d.Scale))
+				imd.Rectangle(0)
 			}
 		}
 	}
