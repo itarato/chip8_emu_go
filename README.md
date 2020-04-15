@@ -11,6 +11,8 @@ Learning project to implement the 70's Chip8 architecture. Sources:
 
 ![Screenshot](assets/screenshot.png)
 
+![Screenshot](assets/screenshot2.png)
+
 Run: `go run main <ROM_NAME>`
 
 You can find [roms here](https://github.com/loktar00/chip8/tree/master/roms).
