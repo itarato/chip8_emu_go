@@ -74,9 +74,19 @@ func (d *Display) DrawSprite(x uint8, y uint8, n uint8, byte_arr []byte) bool {
 }
 
 func (d *Display) SetPixel(x uint8, y uint8, val bool) {
+	if uint32(y)*64+uint32(x) >= 2048 {
+		// panic(fmt.Sprintf("Out of bound pixel requested: %d:%d", x, y))
+		return
+	}
+
 	d.Pixels[uint32(y)*64+uint32(x)] = val
 }
 
 func (d *Display) GetPixel(x uint8, y uint8) bool {
+	if uint32(y)*64+uint32(x) >= 2048 {
+		// panic(fmt.Sprintf("Out of bound pixel requested: %d:%d", x, y))
+		return false
+	}
+
 	return d.Pixels[uint32(y)*64+uint32(x)]
 }

@@ -69,7 +69,11 @@ func (e *Emu) Run() {
 }
 
 func (e *Emu) RunCycle() {
+	throttler := MakeThrottler()
+
 	for !e.Win.Closed() && !e.Halted {
+		throttler.Throttle()
+
 		opcode, err_opcode := e.FetchOpcode()
 		if err_opcode != nil {
 			panic("Illegal opcode fetch")
@@ -78,21 +82,15 @@ func (e *Emu) RunCycle() {
 		e.ExecIntruction(opcode)
 
 		if e.DrawFlag {
-			// imd := imdraw.New(nil)
-			// imd.Color = pixel.RGB(1, 1, 1)
-
 			e.Win.Clear(color.Black)
 			e.Display.Draw(e.Win)
-			// imd.Draw(e.Win)
 			e.Win.Update()
 			e.DrawFlag = false
 		}
 
 		e.Input.UpdateState(e.Win)
 		e.Sound.Update()
-		e.Timer.Dec() // @TODO - Probably needs ignoring opcode while in-delay
-
-		// @TODO Throttle 1 cycle to 16ms (60 instruction per second).
+		e.Timer.Dec()
 	}
 }
 
