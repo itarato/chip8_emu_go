@@ -3,6 +3,7 @@ package chip8
 import (
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/imdraw"
+	"github.com/faiface/pixel/pixelgl"
 )
 
 // 64x32, monochrome.
@@ -12,11 +13,26 @@ import (
 type Display struct {
 	Pixels [2048] /*64x32*/ bool
 	Scale  float64
+	Imds   []*imdraw.IMDraw
 }
 
 func MakeDisplay(scale float64) Display {
+	imds := make([]*imdraw.IMDraw, 0)
+
+	for y := uint8(0); y < 32; y++ {
+		for x := uint8(0); x < 64; x++ {
+			imd := imdraw.New(nil)
+			imd.Color = pixel.RGB(1, 1, 1)
+			imd.Push(pixel.V(float64(x)*scale, float64(32-y)*scale))
+			imd.Push(pixel.V(float64(x+1)*scale, float64(32-(y+1))*scale))
+			imd.Rectangle(0)
+			imds = append(imds, imd)
+		}
+	}
+
 	return Display{
 		Scale: scale,
+		Imds:  imds,
 	}
 }
 
@@ -24,15 +40,10 @@ func (d *Display) Init() {
 	d.Clear()
 }
 
-func (d *Display) Draw(imd *imdraw.IMDraw) {
-	// Move everything to Imd.
-	for y := uint8(0); y < 32; y++ {
-		for x := uint8(0); x < 64; x++ {
-			if d.GetPixel(x, y) {
-				imd.Push(pixel.V(float64(x)*d.Scale, float64(32-y)*d.Scale))
-				imd.Push(pixel.V(float64(x+1)*d.Scale, float64(32-(y+1))*d.Scale))
-				imd.Rectangle(0)
-			}
+func (d *Display) Draw(win *pixelgl.Window) {
+	for i := 0; i < 2048; i++ {
+		if d.Pixels[i] {
+			d.Imds[i].Draw(win)
 		}
 	}
 }

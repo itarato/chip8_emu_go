@@ -1,13 +1,12 @@
 package chip8
 
 import (
+	"fmt"
 	"image/color"
 	"math/rand"
 
 	"golang.org/x/image/colornames"
 
-	"github.com/faiface/pixel"
-	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
 )
 
@@ -70,13 +69,6 @@ func (e *Emu) Run() {
 }
 
 func (e *Emu) RunCycle() {
-	// f, err := os.Create("/home/itarato/Desktop/prof")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// pprof.StartCPUProfile(f)
-	// defer pprof.StopCPUProfile()
-
 	for !e.Win.Closed() && !e.Halted {
 		opcode, err_opcode := e.FetchOpcode()
 		if err_opcode != nil {
@@ -86,12 +78,12 @@ func (e *Emu) RunCycle() {
 		e.ExecIntruction(opcode)
 
 		if e.DrawFlag {
-			imd := imdraw.New(nil)
-			imd.Color = pixel.RGB(1, 1, 1)
+			// imd := imdraw.New(nil)
+			// imd.Color = pixel.RGB(1, 1, 1)
 
 			e.Win.Clear(color.Black)
-			e.Display.Draw(imd)
-			imd.Draw(e.Win)
+			e.Display.Draw(e.Win)
+			// imd.Draw(e.Win)
 			e.Win.Update()
 			e.DrawFlag = false
 		}
@@ -261,7 +253,8 @@ func (e *Emu) ExecIntruction(opcode uint16) {
 			e.Reg.V[reg_num_x] = uint8(e.Timer.Counter)
 		case 0x0A:
 			// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
-			panic("Unimplemented FX0A")
+			// panic("Unimplemented FX0A")
+			fmt.Scanln()
 		case 0x15:
 			// FX15 	Timer 	delay_timer(Vx) 	Sets the delay timer to VX.
 			e.Timer.Set(e.Reg.V[reg_num_x])
